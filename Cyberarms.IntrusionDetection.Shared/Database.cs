@@ -6,8 +6,10 @@ using System.Text;
 
 using System.Data.SQLite;
 
-namespace Cyberarms.IntrusionDetection.Shared {
-    public class Database {
+namespace Cyberarms.IntrusionDetection.Shared
+{
+    public class Database
+    {
         public const string DB_CONNECTION_STRING =
             "Persist Security Info = False; Data Source = {0};" +
             "Password = 'hasdvfdfaxNm.DFd3djkn2li9fu24$'; File Mode = 'read write'; " +
@@ -18,20 +20,20 @@ namespace Cyberarms.IntrusionDetection.Shared {
 
         private SQLiteConnectionStringBuilder connBuilder = new SQLiteConnectionStringBuilder();
 
-
-
-        public void Configure(string directory) {
+        public void Configure(string directory)
+        {
             connBuilder.FailIfMissing = false;
             connBuilder.Flags = SQLiteConnectionFlags.Default;
             connBuilder.ForeignKeys = true;
             connBuilder.JournalMode = SQLiteJournalModeEnum.Truncate;
-            connBuilder.Password = "hasdvfdfaxNm.DFd3djkn2li9fu24$";
+            //connBuilder.Password = "hasdvfdfaxNm.DFd3djkn2li9fu24$";
             connBuilder.Pooling = true;
             connBuilder.ReadOnly = false;
             connBuilder.SyncMode = SynchronizationModes.Normal;
             connBuilder.DataSource = directory + "\\cyberarms.idds.dbf";
             _connection = new SQLiteConnection(connBuilder.ConnectionString);
-            if (!System.IO.File.Exists(connBuilder.DataSource)) {
+            if (!System.IO.File.Exists(connBuilder.DataSource))
+            {
                 SQLiteConnection.CreateFile(connBuilder.DataSource);
 
                 /*engine = new SqlCeEngine(String.Format(DB_CONNECTION_STRING, directory + "\\cyberarms.idds.sdf"));
@@ -45,17 +47,20 @@ namespace Cyberarms.IntrusionDetection.Shared {
             _isConfigured = true;
         }
 
-        void _connection_StateChange(object sender, StateChangeEventArgs e) {
+        private void _connection_StateChange(object sender, StateChangeEventArgs e)
+        {
             System.Diagnostics.Debug.Print("Db state {0} --> {1}", e.OriginalState, e.CurrentState);
         }
 
-
         private System.Data.SQLite.SQLiteConnection _connection;
 
-        public SQLiteConnection Connection {
-            get {
+        public SQLiteConnection Connection
+        {
+            get
+            {
                 if (_connection == null) throw new ApplicationException("Sorry, cannot return requested connection object. Please run Configure first to set database path.");
-                if (_connection.State == System.Data.ConnectionState.Broken) {
+                if (_connection.State == System.Data.ConnectionState.Broken)
+                {
                     _connection.Open();
                 }
                 // open new connection;
@@ -64,84 +69,110 @@ namespace Cyberarms.IntrusionDetection.Shared {
         }
 
         private static Database _instance;
-        public static Database Instance {
-            get {
-                if (_instance == null) {
-                    _instance = new Database();
 
+        public static Database Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    _instance = new Database();
                 }
                 return _instance;
             }
         }
 
-        private Database() {
-
+        private Database()
+        {
         }
 
-
-        public IDataReader ExecuteReader(string sqlString, params object[] parameters) {
+        public IDataReader ExecuteReader(string sqlString, params object[] parameters)
+        {
             return ExecuteReader(sqlString, null, parameters);
         }
 
-        public IDataReader ExecuteReader(string sqlString, IDbTransaction transaction, params object[] parameters) {
+        public IDataReader ExecuteReader(string sqlString, IDbTransaction transaction, params object[] parameters)
+        {
             IDbCommand cmd = PrepareCommand(sqlString, parameters);
             IDataReader rdr = null;
             if (transaction != null) cmd.Transaction = transaction;
-            try {
+            try
+            {
                 rdr = cmd.ExecuteReader();
-            } catch (Exception ex) {
-                for (int i = 0; i < 5; i++) {
+            }
+            catch (Exception ex)
+            {
+                for (int i = 0; i < 5; i++)
+                {
                     System.Threading.Thread.Sleep(500);
-                    try {
+                    try
+                    {
                         rdr = cmd.ExecuteReader();
                         return rdr;
-                    } catch { }
+                    }
+                    catch { }
                 }
                 throw ex;
             }
             return rdr;
         }
 
-        public void ExecuteNonQuery(string sqlString, params object[] parameters) {
+        public void ExecuteNonQuery(string sqlString, params object[] parameters)
+        {
             ExecuteNonQuery(sqlString, null, parameters);
         }
 
-        public void ExecuteNonQuery(string sqlString, IDbTransaction transaction, params object[] parameters) {
+        public void ExecuteNonQuery(string sqlString, IDbTransaction transaction, params object[] parameters)
+        {
             IDbCommand cmd = PrepareCommand(sqlString, parameters);
-            try {
+            try
+            {
                 if (transaction != null) cmd.Transaction = transaction;
                 cmd.ExecuteNonQuery();
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 // try to recover
-                try {
+                try
+                {
                     IDbConnection conn = (IDbConnection)Connection.Clone();
                     if (conn.State != ConnectionState.Open) conn.Open();
                     cmd.Connection = conn;
-                    try {
+                    try
+                    {
                         cmd.ExecuteNonQuery();
-                    } catch (Exception ex2) {
-                        for (int i = 0; i < 5; i++) {
+                    }
+                    catch (Exception ex2)
+                    {
+                        for (int i = 0; i < 5; i++)
+                        {
                             System.Threading.Thread.Sleep(500);
-                            try {
+                            try
+                            {
                                 cmd.ExecuteNonQuery();
                                 return;
-                            } catch { }
+                            }
+                            catch { }
                         }
                         throw ex2;
                     }
                     conn.Close();
-                } catch (Exception ex1) {
+                }
+                catch (Exception ex1)
+                {
                     throw ex1;
                 }
             }
         }
 
-        private IDbCommand PrepareCommand(string sqlString, params object[] parameters) {
+        private IDbCommand PrepareCommand(string sqlString, params object[] parameters)
+        {
             IDbCommand cmd = Connection.CreateCommand();
             cmd.Connection = Connection;
             cmd.CommandText = sqlString;
             cmd.CommandType = System.Data.CommandType.Text;
-            for (int i = 0; i < parameters.Length; i++) {
+            for (int i = 0; i < parameters.Length; i++)
+            {
                 IDbDataParameter p = cmd.CreateParameter();
                 p.ParameterName = "@p" + i;
                 p.Value = parameters[i];
@@ -152,25 +183,33 @@ namespace Cyberarms.IntrusionDetection.Shared {
             return cmd;
         }
 
-        public object ExecuteScalar(string sqlString, params object[] parameters) {
+        public object ExecuteScalar(string sqlString, params object[] parameters)
+        {
             return ExecuteScalar(sqlString, null, parameters);
         }
 
-        public object ExecuteScalar(string sqlString, IDbTransaction transaction, params object[] parameters) {
+        public object ExecuteScalar(string sqlString, IDbTransaction transaction, params object[] parameters)
+        {
             object result = null;
             IDbCommand cmd = PrepareCommand(sqlString, parameters);
             if (transaction != null) cmd.Transaction = transaction;
-            
-            try {
+
+            try
+            {
                 result = cmd.ExecuteScalar();
-            } catch (Exception ex) {
-                for (int i = 0; i < 5; i++) {
+            }
+            catch (Exception ex)
+            {
+                for (int i = 0; i < 5; i++)
+                {
                     // can we recover the problem within a timeout period?
                     System.Threading.Thread.Sleep(500);
-                    try {
+                    try
+                    {
                         result = cmd.ExecuteScalar();
                         return result;
-                    } catch { }
+                    }
+                    catch { }
                 }
                 throw ex;
             }
@@ -179,34 +218,41 @@ namespace Cyberarms.IntrusionDetection.Shared {
 
         public int DatabaseVersion { get; set; }
 
-        private void OpenOrCreate() {
+        private void OpenOrCreate()
+        {
             System.Data.IDbCommand cmd = Connection.CreateCommand();
             string version = null;
-            try {
+            try
+            {
                 cmd.CommandText = "Select Version from DbConfig";
                 version = cmd.ExecuteScalar().ToString();
-            } catch (Exception sqEx) {
+            }
+            catch (Exception sqEx)
+            {
                 //
                 System.Diagnostics.Debug.Print(sqEx.Message.ToString());
             }
-            if (String.IsNullOrEmpty(version)) {
+            if (String.IsNullOrEmpty(version))
+            {
                 // no database exists, or database was deleted. create tables and populate
                 Db.DbUpgrader upgrader = new Db.DbUpgrader();
                 upgrader.RunUpgradeScripts(Connection);
                 int versionNumber;
-                if (int.TryParse(cmd.ExecuteScalar().ToString(), out versionNumber)) {
+                if (int.TryParse(cmd.ExecuteScalar().ToString(), out versionNumber))
+                {
                     DatabaseVersion = versionNumber;
-                } else {
+                }
+                else
+                {
                     throw new ApplicationException("Error while accessing or creating the database");
                 }
-            } else {
+            }
+            else
+            {
                 int versionNumber = -1;
                 int.TryParse(version, out versionNumber);
                 DatabaseVersion = versionNumber;
             }
         }
-
-
-
     }
 }
